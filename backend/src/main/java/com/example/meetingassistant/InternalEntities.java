@@ -1,0 +1,12 @@
+package com.example.meetingassistant;
+
+import jakarta.persistence.*;
+
+@Entity class InternalClient { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) Long id; @Column(unique=true) String name; String contact; protected InternalClient(){} InternalClient(String name,String contact){this.name=name;this.contact=contact;} public Long getId(){return id;} public String getName(){return name;} public String getContact(){return contact;} }
+@Entity class Employee { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) Long id; @Column(unique=true) String name; protected Employee(){} Employee(String name){this.name=name;} public Long getId(){return id;} public String getName(){return name;} }
+@Entity class InternalMeetingNote { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) Long id; @Column(unique=true) String meetingId; String clientName; @Lob String summary; protected InternalMeetingNote(){} InternalMeetingNote(String id,String c,String s){meetingId=id;clientName=c;summary=s;} public Long getId(){return id;} public String getMeetingId(){return meetingId;} public String getClientName(){return clientName;} public String getSummary(){return summary;} }
+@Entity class InternalTask { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) Long id; @Column(unique=true) String idempotencyKey; String meetingId; String title; String assignee; String dueDate; protected InternalTask(){} InternalTask(String key,String m,String t,String a,String d){idempotencyKey=key;meetingId=m;title=t;assignee=a;dueDate=d;} public Long getId(){return id;} public String getMeetingId(){return meetingId;} public String getTitle(){return title;} public String getAssignee(){return assignee;} public String getDueDate(){return dueDate;} }
+interface InternalClientRepository extends org.springframework.data.jpa.repository.JpaRepository<InternalClient,Long>{ java.util.List<InternalClient> findByNameContainingIgnoreCase(String name); boolean existsByName(String name); }
+interface EmployeeRepository extends org.springframework.data.jpa.repository.JpaRepository<Employee,Long>{ boolean existsByName(String name); }
+interface InternalMeetingNoteRepository extends org.springframework.data.jpa.repository.JpaRepository<InternalMeetingNote,Long>{ java.util.Optional<InternalMeetingNote> findByMeetingId(String meetingId); }
+interface InternalTaskRepository extends org.springframework.data.jpa.repository.JpaRepository<InternalTask,Long>{ java.util.Optional<InternalTask> findByIdempotencyKey(String key); }

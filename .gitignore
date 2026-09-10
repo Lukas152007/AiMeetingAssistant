@@ -1,0 +1,10 @@
+.env
+*.log
+target/
+node_modules/
+dist/
+*.tsbuildinfo
+work/
+.idea/
+.vscode/
+*.iml

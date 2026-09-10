@@ -1,0 +1,7 @@
+00:00:15 Ana (Podjetje ABC d.o.o.): Želimo prenovo spletne strani.
+00:01:10 Ana: Pomemben nam je obrazec za povpraševanje.
+00:02:20 Ana: Potrebujemo povezavo s CRM-jem, CRM bomo še potrdili.
+00:03:05 Ana: Stran mora dobro delovati tudi na telefonu.
+00:04:10 Ana: Projekt bi radi zaključili do konca novembra.
+00:04:35 Marko: Zaradi obsega je bolj realen december.
+00:05:10 Luka: Do petka bom pripravil ponudbo.

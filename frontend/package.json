@@ -1,0 +1,1 @@
+{"name":"ai-meeting-assistant-ui","private":true,"version":"0.0.1","type":"module","scripts":{"dev":"vite","build":"tsc -b && vite build"},"dependencies":{"react":"latest","react-dom":"latest"},"devDependencies":{"@types/react":"latest","@types/react-dom":"latest","typescript":"latest","vite":"latest"}}
