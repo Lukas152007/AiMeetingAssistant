@@ -1,45 +1,35 @@
 # AI Meeting Assistant
 
-Lokalno zaganjljiv prototip za pretvorbo transkripta sestanka v pregleden predlog, ki ga zaposleni popravi in potrdi pred zapisom v interni sistem. Vmesnik in primeri so v slovenščini.
+Lokalni prototip, ki iz transkripta sestanka pripravi strukturiran predlog. AI pomaga pri razvrščanju informacij, zaposleni pa pred sinhronizacijo vedno pregleda in potrdi poslovno pomembne podatke.
 
-## Problem, ki ga rešuje
+## Glavne funkcionalnosti
 
-Po sestankih so dogovori razpršeni po zapiskih, odgovornosti pa se lahko napačno sklepajo. Prototip pokaže varen tok, kjer AI pomaga strukturirati informacije, človek pa ostane nosilec poslovne odločitve.
-
-## Glavni tok
-
-```text
-Transkript → demo AI analiza → človeški pregled in potrditev
-                                      ↓
-                         validacija / mock Internal Business API
-                                      ↓
-                      zapisnik + potrjene naloge + follow-up osnutek
-```
-
-## Funkcionalnosti
-
-- primer transkripta za `Podjetje ABC d.o.o.` z zahtevami, dogovorjeno nalogo, AI-predlogom, odprtim vprašanjem in konfliktom roka;
-- ločeni tipi `agreed`, `ai_suggestion` in `needs_review`, izvorni citati ter stopnja zaupanja;
-- urejanje povzetka, opisov, odgovorne osebe, roka in statusa vsake postavke;
-- H2 trajna (v pomnilniku za demo) hramba pregledane verzije, mock klientov/zaposlenih/zapisnikov/nalog;
-- varna sinhronizacija, idempotency ključ (`meeting_id:item_id`), retry in kopirljiv ročni fallback;
-- follow-up e-mail, sestavljen samo iz podatkov s statusom `approved`.
+- trije demo scenariji: **Podjetje ABC d.o.o.**, nejasen primer z `low` zaupanjem in **Zelena Pot d.o.o.** s turističnimi rezervacijami ter integracijo TravelDesk;
+- strukturirane zahteve, naloge, odprta vprašanja, dokazi iz transkripta in stopnja zaupanja;
+- ločitev med dogovorjeno nalogo, AI-predlogom in postavko, ki potrebuje pregled;
+- urejanje povzetka, zahtev, odgovorne osebe, roka in statusa potrditve;
+- jasna izbira za konflikt roka: **konec novembra**, **december** ali **rok ni potrjen**;
+- mock interni poslovni API z odjemalci, zaposlenimi, zapisniki in nalogami v H2;
+- idempotentna sinhronizacija, retry, `PENDING_SYNC`, `FAILED_SYNC` in kopirljiv ročni fallback;
+- follow-up e-mail, ustvarjen izključno iz potrjenih podatkov.
 
 ## Arhitektura
 
 ```text
-React + Vite ─REST─> Spring Boot
-                       ├─ TranscriptAnalysisService (offline DemoTranscriptAnalysisService)
-                       ├─ MeetingService: pregled, validacija, retry, e-mail
-                       ├─ InternalBusinessService: integracijska meja in idempotency
-                       └─ H2 / JPA: predlogi in mock interni podatki
+React + Vite ── REST ──> Spring Boot
+                         ├─ DemoTranscriptAnalysisService
+                         ├─ MeetingService: pregled, validacija, retry, e-mail
+                         ├─ InternalBusinessService: mock integracija
+                         └─ H2 / JPA: predlogi in interni podatki
 ```
 
-`InternalBusinessService` je namenoma ločen od mock podatkovnega API-ja: v resnični izvedbi bi ga zamenjal adapter za dokumentirani interni API.
+`TranscriptAnalysisService` je razširitvena točka za pravi AI ponudnik. Privzeti `DEMO_MODE=true` je povsem lokalen in ne potrebuje API-ključa.
 
 ## Lokalni zagon
 
-Predpogoji: Java 21+ in Maven 3.9+, Node.js 20+.
+Predpogoji: Java 21+, Maven 3.9+ in Node.js 20+.
+
+V prvem terminalu:
 
 ```powershell
 cd backend
@@ -50,27 +40,46 @@ V drugem terminalu:
 
 ```powershell
 cd frontend
-npm install
-npm run dev
+npm.cmd install
+npm.cmd run dev
 ```
 
-Odprite `http://localhost:5173`. Backend je na `http://localhost:8080`, H2 konzola pa na `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:meetingassistant`).
+Odprite `http://localhost:5173`. Backend deluje na `http://localhost:8080`.
 
-## Demo potek
+H2 konzola je na `http://localhost:8080/h2-console`:
 
-1. Izberite **Naloži primer transkripta** in nato **Analiziraj transkript**.
-2. Preglejte citate. AI-predlog zavrnite ali ga izrecno potrdite in mu dodelite zaposlenega.
-3. Konflikt glede novembra/decembra označite kot potrjen/popravljen ali zavrnjen.
-4. Izberite **Potrdi in sinhroniziraj**. Vidni so ustvarjeni zapisnik in naloge.
+```text
+JDBC URL: jdbc:h2:mem:meetingassistant;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+User: sa
+Password: prazno
+```
 
-## Napaka API-ja in ročni fallback
+## Demo scenariji
 
-Označite **Simuliraj nedosegljiv interni API** pred sinhronizacijo. Potrjena različica se najprej shrani v H2 in dobi `PENDING_SYNC`. Gumb **Poskusi ponovno** izvede največ tri poskuse z naraščajočim čakanjem; ob nadaljnji nedosegljivosti se stanje spremeni v `FAILED_SYNC`, podatki pa ostanejo shranjeni. Prikaže se kopirljiv ročni fallback s potrjenim povzetkom, nalogami in e-mailom. Izklopite simulacijo in ponovno poskusite za uspeh.
+1. **Podjetje ABC d.o.o.** — obrazec za povpraševanje, CRM integracija, mobilna prilagoditev, Luka pripravi ponudbo do `2026-09-12`, AI-predlog in konflikt roka.
+2. **Nejasen primer** — varni fallback: neznan klient, `null` vrednosti, `low` zaupanje in status `needs_review`. Sinhronizacija je blokirana do ročnega pregleda.
+3. **Zelena Pot d.o.o.** — spletne turistične rezervacije, TravelDesk, večjezični vmesnik, naloge za Marka in Ano ter odprta vprašanja o odpovedih in cenah.
 
-## Varnost poslovnih podatkov
+Za ABC najprej potrdite ali zavrnite AI-predlog, nato pri konfliktu izberite eno od treh možnosti roka. Šele nato je sinhronizacija dovoljena.
 
-AI ni avtoriteta. JSON Schema določa strukturo odgovora, ne pa vsebinske pravilnosti. Zato so izvorni citati, validacija in človeška potrditev obvezni. AI-predlog ni dogovorjena obveznost: ne more se sinhronizirati brez statusa `approved`. Neobravnavane nejasnosti/konflikti, neznan klient, neobstoječi zaposleni in neveljavni datumi sinhronizacijo blokirajo.
+## Simulacija napake API-ja
 
-## Omejitve in produkcijska nadgradnja
+1. Potrdite oziroma zavrnite vse postavke, ki potrebujejo pregled.
+2. Označite **Simuliraj nedosegljiv interni API** in kliknite **Potrdi in sinhroniziraj**.
+3. Potrjena različica se najprej shrani v H2 in prikaže se `PENDING_SYNC`.
+4. Kliknite **Poskusi ponovno**. Ob treh neuspešnih poskusih se prikaže `FAILED_SYNC`.
+5. Na voljo je **Kopiraj ročni povzetek**. Vsebuje samo potrjeni povzetek, potrjene naloge z odgovornimi osebami in roki ter potrjeni follow-up e-mail.
+6. Izklopite simulacijo in ponovno poskusite za uspešno sinhronizacijo.
 
-`DEMO_MODE=true` ne kliče zunanjega AI-ja; za načrt prave, strogo strukturirane integracije glejte [docs/ai-prompt.md](docs/ai-prompt.md). H2 je demonstracijska baza, retry je zavestno preprost in sinhron. Produkcija bi dodala avtentikacijo, avtorizacijo, HTTPS, šifrirano upravljanje skrivnosti, obstojno čakalno vrsto z background retryji, audit log, omejevanje dostopa in integracijski adapter z opazljivostjo.
+## Kontrole proti napačnim AI-podatkom
+
+- AI-predlog nikoli ne postane naloga brez izrecnega statusa `approved`.
+- `needs_review` in neobravnavan konflikt blokirata sinhronizacijo.
+- Potrjena naloga zahteva naslov, obstoječo odgovorno osebo in veljaven ISO datum, če je rok naveden.
+- Neznan klient zahteva ročni izbor.
+- Dokazi iz transkripta in stopnja zaupanja niso dokaz resničnosti; zaposleni jih mora pregledati.
+- Ročni fallback in e-mail ne vključujeta zavrnjenih ali nepotrjenih podatkov.
+
+## Omejitve prototipa
+
+H2 je pomnilniška demo baza in retry je namenoma preprost ter sinhron. Produkcijska različica bi potrebovala prijavo uporabnikov, avtorizacijo, HTTPS, varno hrambo skrivnosti, obstojno vrsto za retryje, audit log, opazljivost in preverjen adapter za pravi interni API oziroma AI ponudnika.

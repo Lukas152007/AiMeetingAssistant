@@ -32,10 +32,10 @@ class MeetingService {
     e.syncStatus=SyncStatus.FAILED_SYNC; e.payload=write(withSyncStatus(readPayload(e),SyncStatus.FAILED_SYNC));
     return new SyncResult(SyncStatus.FAILED_SYNC,"Interni API po treh poskusih ni dosegljiv. Podatki ostanejo shranjeni.",null,List.of(),m.follow_up_email(),3);
   }
-  String fallback(String id){ MeetingDto m=read(id); return "POTRJEN POVZETEK\n"+m.meeting_summary()+"\n\nPOTRJENE NALOGE\n"+m.action_items().stream().filter(x->x.status()==ReviewStatus.approved).map(x->"- "+x.description()+" ("+x.assignee()+")").reduce("",(a,b)->a+b+"\n")+"\nE-MAIL\n"+m.follow_up_email(); }
+  String fallback(String id){ MeetingDto m=read(id); return "POTRJEN POVZETEK\n"+m.meeting_summary()+"\n\nPOTRJENE NALOGE\n"+m.action_items().stream().filter(x->x.status()==ReviewStatus.approved).map(x->"- "+x.description()+" | odgovorna oseba: "+x.assignee()+(x.due_date()!=null?" | rok: "+x.due_date():"")).reduce("",(a,b)->a+b+"\n")+"\nE-MAIL\n"+m.follow_up_email(); }
   private void validateForSync(MeetingDto m){
     if(m.client()==null || m.client().name()==null || !internal.clientExists(m.client().name())) fail("Izberite obstoječega klienta.");
-    if(m.conflicts().stream().anyMatch(c->c.status()==ReviewStatus.needs_review) || m.requirements().stream().anyMatch(i->i.status()==ReviewStatus.needs_review) || m.action_items().stream().anyMatch(i->i.status()==ReviewStatus.needs_review)) fail("Vse nejasne ali konfliktne postavke morajo biti obravnavane.");
+    if(m.conflicts().stream().anyMatch(c->c.status()==ReviewStatus.needs_review || c.selected_value()==null || c.selected_value().isBlank()) || m.requirements().stream().anyMatch(i->i.status()==ReviewStatus.needs_review) || m.action_items().stream().anyMatch(i->i.status()==ReviewStatus.needs_review)) fail("Vse nejasne ali konfliktne postavke morajo biti obravnavane.");
     for(ReviewItem item:m.action_items()) if(item.status()==ReviewStatus.approved){
       if(item.description()==null||item.description().isBlank()) fail("Potrjena naloga potrebuje naslov.");
       if(!internal.employeeExists(item.assignee())) fail("Potrjena naloga mora imeti obstoječo odgovorno osebo.");

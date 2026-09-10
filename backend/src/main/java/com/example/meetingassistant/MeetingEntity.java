@@ -12,6 +12,4 @@ class MeetingEntity {
   protected MeetingEntity() {}
   MeetingEntity(String id, String payload) { this.meetingId=id; this.payload=payload; }
 }
-
 interface MeetingRepository extends org.springframework.data.jpa.repository.JpaRepository<MeetingEntity, String> {}
-
